@@ -1,4 +1,4 @@
-import { signOutAction } from "@/lib/auth/actions";
+import { AppFooter, AppHeader } from "@/components/app-header";
 import { ROLE_AREAS, ROLE_LABELS } from "@/lib/auth/roles";
 import type { TenantSummary } from "@/lib/auth/tenant";
 import type { UserRole } from "@/lib/types/database";
@@ -69,39 +69,7 @@ export function RoleDashboard({
 }) {
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6">
-          <div className="flex items-center gap-3">
-            <span
-              aria-hidden="true"
-              className="grid size-9 place-items-center rounded-lg bg-slate-900 text-xs font-bold text-white"
-            >
-              Rx
-            </span>
-            <div className="leading-tight">
-              <p className="text-sm font-semibold tracking-tight text-slate-900">
-                Pharmacy &amp; Welfare Platform
-              </p>
-              <p className="text-xs text-slate-500">{ROLE_AREAS[role]}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-medium text-slate-900">{fullName}</p>
-              <p className="text-xs text-slate-500">{email}</p>
-            </div>
-            <form action={signOutAction}>
-              <button
-                type="submit"
-                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
-              >
-                Sign out
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+      <AppHeader role={role} fullName={fullName} email={email} />
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
         {notice ? (
@@ -215,12 +183,7 @@ export function RoleDashboard({
         </section>
       </main>
 
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs text-slate-400 sm:px-6">
-          <span>Pharmacy &amp; Welfare Platform</span>
-          <span className="font-mono">{profileId}</span>
-        </div>
-      </footer>
+      <AppFooter profileId={profileId} />
     </div>
   );
 }

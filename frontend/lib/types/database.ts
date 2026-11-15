@@ -398,19 +398,50 @@ export interface Database {
         Row: WelfareHomeRow;
         Insert: WelfareHomeInsert;
         Update: WelfareHomeUpdate;
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "profiles_welfare_home_id_fkey";
+            columns: ["id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["welfare_home_id"];
+          },
+        ];
       };
       pharmacies: {
         Row: PharmacyRow;
         Insert: PharmacyInsert;
         Update: PharmacyUpdate;
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "profiles_pharmacy_id_fkey";
+            columns: ["id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["pharmacy_id"];
+          },
+        ];
       };
       profiles: {
         Row: ProfileRow;
         Insert: ProfileInsert;
         Update: ProfileUpdate;
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "profiles_welfare_home_id_fkey";
+            columns: ["welfare_home_id"];
+            isOneToOne: false;
+            referencedRelation: "welfare_homes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "profiles_pharmacy_id_fkey";
+            columns: ["pharmacy_id"];
+            isOneToOne: false;
+            referencedRelation: "pharmacies";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       residents: {
         Row: ResidentRow;

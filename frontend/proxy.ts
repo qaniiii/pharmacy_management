@@ -6,13 +6,18 @@ import { getSupabasePublicConfig } from "@/lib/env";
 import type { Database, UserRole } from "@/lib/types/database";
 
 const LOGIN_PATH = "/login";
+const INVITE_PATH = "/invite";
+
+/** Paths an unauthenticated visitor may load. */
+const PUBLIC_PATHS = new Set([LOGIN_PATH, INVITE_PATH]);
 
 /**
  * Next.js 16 proxy (the replacement for `middleware.ts`).
  *
  * Responsibilities:
  *   1. Refresh the Supabase session cookies on every request.
- *   2. Reject unauthenticated callers to `/login`.
+ *   2. Allow `/login` and `/invite` for unauthenticated callers, and reject
+ *      every other area.
  *   3. Reject sessions that have no active `profiles` row (unprovisioned or
  *      deactivated accounts) — those cookies are cleared.
  *   4. Pin each role to its own area and bounce authenticated users who stray
@@ -61,7 +66,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    if (pathname === LOGIN_PATH) return response;
+    if (PUBLIC_PATHS.has(pathname)) return response;
     return redirectTo(
       `${LOGIN_PATH}?next=${encodeURIComponent(pathname + request.nextUrl.search)}`,
     );

@@ -19,14 +19,17 @@ const { combinedEnv } = loadEnvConfig(
 
 const supabaseUrl = combinedEnv.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const supabaseAnonKey = combinedEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+const apiBaseUrl = (combinedEnv.API_BASE_URL ?? "").replace(/\/+$/, "");
 
 const nextConfig: NextConfig = {
   // Public Supabase credentials are safe to inline: they are anon keys whose
   // reach is limited by Row Level Security. SUPABASE_SERVICE_ROLE_KEY is never
-  // read here and must stay out of the browser bundle.
+  // read here and must stay out of the browser bundle. API_BASE_URL only points
+  // at the FastAPI service; the access token is attached in server actions.
   env: {
     NEXT_PUBLIC_SUPABASE_URL: supabaseUrl,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: supabaseAnonKey,
+    API_BASE_URL: apiBaseUrl || "http://localhost:8000",
   },
   turbopack: {
     rules: {

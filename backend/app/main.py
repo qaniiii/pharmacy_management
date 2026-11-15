@@ -7,11 +7,13 @@ Run locally:
 
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
-from app.api.routes import health, me
+from app.api.routes import admin, health, me
 from app.core.config import Settings, get_settings
+from app.services.supabase_admin import SupabaseAdminError
 
 DESCRIPTION = """
 Backend for the pharmacy / welfare-home medication platform.
@@ -28,9 +30,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title=resolved.app_name,
-        version="0.2.0",
+        version="0.3.0",
         description=DESCRIPTION,
     )
+
+    @app.exception_handler(SupabaseAdminError)
+    async def _supabase_admin_error(
+        _request: Request, exc: SupabaseAdminError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+        )
 
     app.add_middleware(
         CORSMiddleware,
@@ -42,6 +53,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(me.router, prefix=resolved.api_prefix)
+    app.include_router(admin.router, prefix=resolved.api_prefix)
 
     return app
 

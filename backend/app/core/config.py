@@ -10,9 +10,10 @@ Precedence (last wins):
     4. `backend/.env`
     5. real environment variables
 
-`SUPABASE_SERVICE_ROLE_KEY` is optional and only needed for future
-server-to-server jobs. Request handling authenticates as the caller and relies
-on Row Level Security, so it is never used for user-facing queries.
+`SUPABASE_SERVICE_ROLE_KEY` is optional and only used by the system-admin
+provisioning endpoints, which must create `auth.users` rows and bypass RLS.
+Request handling for every other endpoint authenticates as the caller and
+relies on Row Level Security, so the key is never used for user-facing queries.
 """
 
 from __future__ import annotations
@@ -88,6 +89,13 @@ class Settings(BaseSettings):
     )
     request_timeout_seconds: float = 10.0
 
+    # Invitations sent by the Admin API link back to the Next.js app, which
+    # hosts the password-reset form at /login.
+    frontend_base_url: str = Field(
+        default="http://localhost:3000",
+        validation_alias=AliasChoices("FRONTEND_BASE_URL"),
+    )
+
     @field_validator("supabase_url")
     @classmethod
     def _normalise_supabase_url(cls, value: str) -> str:
@@ -108,6 +116,16 @@ class Settings(BaseSettings):
             raise ValueError(
                 "SUPABASE_ANON_KEY / NEXT_PUBLIC_SUPABASE_ANON_KEY must not be empty"
             )
+        return cleaned
+
+    @field_validator("frontend_base_url")
+    @classmethod
+    def _normalise_frontend_url(cls, value: str) -> str:
+        cleaned = value.strip().rstrip("/")
+        if not cleaned:
+            return "http://localhost:3000"
+        if not cleaned.startswith(("http://", "https://")):
+            raise ValueError("FRONTEND_BASE_URL must start with http:// or https://")
         return cleaned
 
     @property

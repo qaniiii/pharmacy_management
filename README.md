@@ -18,18 +18,25 @@ supabase/   SQL migrations: schema, RLS, audit trail
 - **Phase 2 — scaffolding:** auth wiring and role routing are live. The
   dashboards show the signed-in administrator's role and tenant but no domain
   data yet.
+- **Phase 3 — administration:** `/admin` onboards welfare homes and pharmacies
+  and provisions their administrator accounts. Account creation and activation
+  go through FastAPI with the service role; every list is read under RLS.
 
 ## Setup
 
 1. Copy `.env.example` to `.env.local` at the repository root and fill in the
-   Supabase URL and anon key. Both apps read that single file.
-2. Frontend:
+   Supabase URL, anon key and service-role key. Both apps read that single file.
+   `SUPABASE_SERVICE_ROLE_KEY` is used only by FastAPI for provisioning.
+2. In Supabase Auth, disable public sign-ups and add
+   `http://localhost:3000/invite` to the redirect URL allow-list so invitation
+   links can reach the password screen.
+3. Frontend:
    ```powershell
    cd frontend
    npm install
    npm run dev
    ```
-3. Backend:
+4. Backend:
    ```powershell
    cd backend
    python -m venv .venv
@@ -37,12 +44,24 @@ supabase/   SQL migrations: schema, RLS, audit trail
    .\.venv\Scripts\uvicorn app.main:app --reload --port 8000
    ```
 
-Verification the scaffold was built against:
+Verification:
 
 ```powershell
-cd frontend; npm run build
+cd frontend; npx tsc --noEmit; npm run lint; npm run build
+cd ..\backend; .\.venv\Scripts\python tests\test_admin_smoke.py
 cd ..\backend; .\.venv\Scripts\python -c "from app.main import app"
 ```
+
+## Onboarding a tenant without SQL
+
+1. Sign in as a `system_admin` and open `/admin`.
+2. On **Welfare homes** or **Pharmacies**, register the tenant.
+3. On **Administrators**, choose the role and tenant, then either send an
+   invitation email or set a temporary password. The backend creates the auth
+   user with the metadata `handle_new_user()` expects and verifies the resulting
+   profile.
+4. Deactivate rather than delete: tenant and account deactivation block access
+   while preserving order history and audit rows.
 
 ## Access model
 
