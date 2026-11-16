@@ -11,6 +11,12 @@ const INVITE_PATH = "/invite";
 /** Paths an unauthenticated visitor may load. */
 const PUBLIC_PATHS = new Set([LOGIN_PATH, INVITE_PATH]);
 
+/** `pathname` without a trailing slash, except for the root. */
+function normalisePath(pathname: string): string {
+  if (pathname.length <= 1) return pathname || "/";
+  return pathname.replace(/\/+$/, "");
+}
+
 /**
  * Next.js 16 proxy (the replacement for `middleware.ts`).
  *
@@ -47,6 +53,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   });
 
   const { pathname } = request.nextUrl;
+  const path = normalisePath(pathname);
 
   const redirectTo = (target: string): NextResponse => {
     const [targetPath, targetQuery] = target.split("?");
@@ -66,7 +73,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    if (PUBLIC_PATHS.has(pathname)) return response;
+    if (PUBLIC_PATHS.has(path)) return response;
     return redirectTo(
       `${LOGIN_PATH}?next=${encodeURIComponent(pathname + request.nextUrl.search)}`,
     );
@@ -90,7 +97,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return redirectTo(`${LOGIN_PATH}?reason=account_unavailable`);
   }
 
-  if (pathname === LOGIN_PATH) {
+  if (path === LOGIN_PATH) {
     return redirectTo(ROLE_HOME[profile.role]);
   }
 

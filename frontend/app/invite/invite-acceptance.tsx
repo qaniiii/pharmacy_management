@@ -1,5 +1,6 @@
 "use client";
 
+import type { EmailOtpType } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 
@@ -30,23 +31,42 @@ export function InviteAcceptance() {
 
     async function bootstrap() {
       const supabase = createClient();
+      const search = new URLSearchParams(window.location.search);
       const fragment = new URLSearchParams(
         window.location.hash.replace(/^#/, ""),
       );
-      const accessToken = fragment.get("access_token");
-      const refreshToken = fragment.get("refresh_token");
-      const code = new URLSearchParams(window.location.search).get("code");
 
-      let failure: string | null = null;
+      const accessToken =
+        fragment.get("access_token") ?? search.get("access_token");
+      const refreshToken =
+        fragment.get("refresh_token") ?? search.get("refresh_token");
+      const code = search.get("code");
+      const tokenHash = search.get("token_hash") ?? fragment.get("token_hash");
+      const otpType = search.get("type") ?? fragment.get("type");
+      const linkError =
+        search.get("error_description") ?? fragment.get("error_description");
 
-      if (accessToken && refreshToken) {
+      let failure: string | null = linkError;
+
+      if (failure) {
+        // Supabase rejected the link (expired, already used, …). Nothing to do.
+      } else if (accessToken && refreshToken) {
+        // Default invite template: implicit flow with tokens in the fragment.
         const { error } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken,
         });
         failure = error?.message ?? null;
       } else if (code) {
+        // PKCE invite (the code verifier is stored in a browser cookie).
         const { error } = await supabase.auth.exchangeCodeForSession(code);
+        failure = error?.message ?? null;
+      } else if (tokenHash && otpType) {
+        // Newer Supabase email templates use `?token_hash=…&type=invite`.
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: otpType as EmailOtpType,
+        });
         failure = error?.message ?? null;
       }
 
@@ -57,9 +77,7 @@ export function InviteAcceptance() {
 
       if (failure) {
         setStatus("error");
-        setMessage(
-          "This invitation link is no longer valid. Ask a system administrator to send a new one.",
-        );
+        setMessage(failure);
         return;
       }
 

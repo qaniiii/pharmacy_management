@@ -6,8 +6,10 @@
  * creation, because a server action can be called directly.
  */
 
-import type { ProvisionUserPayload } from "@/lib/types/api";
-import type { ProvisionableRole } from "@/lib/types/api";
+import type {
+  ProvisionableRole,
+  ProvisionUserPayload,
+} from "@/lib/types/api";
 
 const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const UUID_PATTERN =
