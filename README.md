@@ -21,6 +21,10 @@ supabase/   SQL migrations: schema, RLS, audit trail
 - **Phase 3 — administration:** `/admin` onboards welfare homes and pharmacies
   and provisions their administrator accounts. Account creation and activation
   go through FastAPI with the service role; every list is read under RLS.
+- **Phase 4 — welfare home:** `/welfare?tab=residents|inventory|orders` gives a
+  welfare administrator the resident register, hybrid pooled/resident stock,
+  and direct medication ordering with lifecycle actions and the audit timeline.
+  Every read and write is scoped by RLS to the caller's `welfare_home_id`.
 
 ## Setup
 

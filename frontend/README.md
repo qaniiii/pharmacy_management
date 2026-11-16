@@ -2,8 +2,8 @@
 
 App Router, TypeScript, Tailwind CSS 4. Phase 3 adds the system-admin portal:
 welfare-home and pharmacy onboarding, tenant selection, administrator
-provisioning and account activation. Welfare/pharmacy domain screens (residents,
-inventory, orders) are still to come.
+provisioning and account activation. Phase 4 adds the welfare-home workspace:
+residents, hybrid inventory and direct medication ordering.
 
 ## Scripts
 
@@ -69,6 +69,31 @@ token and re-checks `system_admin`.
 - The Users tab refuses to deactivate the current account in the UI; the backend
   additionally refuses self-deactivation and removing the last system admin.
 
+## Welfare home workspace
+
+`/welfare?tab=residents|inventory|orders` is limited to `welfare_admin`:
+
+| Tab | Reads (Supabase, RLS) | Writes |
+| --- | --- | --- |
+| Residents | residents for the caller's home | insert; update; toggle `is_active` |
+| Inventory | inventory plus resident names, joined in memory | insert; update; toggle `is_active`; dispense/restock quantity |
+| Orders | orders, lines, private resident links and audit logs | create order (plus lines and private links); withdraw pending; confirm prepared receipt |
+
+- The resident register exposes every schema field, including allergies and care
+  notes. Records are deactivated rather than deleted.
+- Inventory separates `resident_id IS NULL` pooled stock from
+  resident-specific prescription stock. Low-stock (`quantity_on_hand <=
+  reorder_level`) and expiring/expired batches are highlighted in the table.
+- The order drawer writes `orders`, `order_items`, `order_residents` and
+  `order_item_inventory` in that order. If a child write fails, the lines and
+  private links are removed while the order is still pending and the order is
+  cancelled, so no orphaned pending draft is left behind.
+- The bag reference is the only resident-related field visible to the pharmacy.
+  The drawer warns against names/DOB/MRNs and the server refuses a reference
+  that contains the linked resident's name or medical record number.
+- Withdraw is `pending -> cancelled`; confirm receipt is `prepared -> completed`.
+  Both are enforced by the database state-machine trigger as well as RLS.
+
 ## Layout
 
 ```
@@ -80,15 +105,20 @@ app/
   admin/
     page.tsx            tabbed platform-administration portal
     actions.ts          tenant CRUD + FastAPI provisioning actions
-  welfare/ pharmacy/    role dashboards
+  welfare/
+    page.tsx            resident, inventory and ordering workspace
+    actions.ts          resident/stock CRUD, quantity, order lifecycle actions
+  pharmacy/             pharmacy dashboard
 components/
   app-header.tsx        shared authenticated header/footer
-  role-dashboard.tsx    welfare/pharmacy placeholder dashboard
+  role-dashboard.tsx    pharmacy placeholder dashboard
   admin/                forms, tables, badges, tab nav, status toggles
+  welfare/              residents, inventory, order drawer/history, modals
 lib/
   env.ts                required public env vars
   api/backend.ts        server-side FastAPI client (Bearer token from Supabase)
   admin/                data loaders, validation, form state, tab routing
+  welfare/              data loaders, validation, tabs, inventory/format helpers
   supabase/client.ts    browser client
   supabase/server.ts    cookie-bound server client
   auth/                 role map, profile guard, tenant loading, actions

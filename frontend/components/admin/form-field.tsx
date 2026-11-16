@@ -50,21 +50,25 @@ export function TextField({
   hint,
   maxLength,
   minLength,
+  min,
+  step,
   className = "",
 }: {
   id: string;
   label: string;
   /** Field name in the submitted FormData. Never derive this from `id`. */
   name: string;
-  type?: "text" | "email" | "tel" | "password";
+  type?: "text" | "email" | "tel" | "password" | "date" | "number";
   required?: boolean;
   placeholder?: string;
-  defaultValue?: string;
+  defaultValue?: string | number;
   autoComplete?: string;
   error?: string;
   hint?: string;
   maxLength?: number;
   minLength?: number;
+  min?: number | string;
+  step?: number | string;
   className?: string;
 }) {
   return (
@@ -85,6 +89,58 @@ export function TextField({
         autoComplete={autoComplete}
         maxLength={maxLength}
         minLength={minLength}
+        min={min}
+        step={step}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${id}-error` : undefined}
+        className={INPUT_CLASS}
+      />
+    </Field>
+  );
+}
+
+export function TextAreaField({
+  id,
+  label,
+  name,
+  required = false,
+  rows = 3,
+  placeholder,
+  defaultValue,
+  error,
+  hint,
+  maxLength,
+  className = "",
+}: {
+  id: string;
+  label: string;
+  /** Field name in the submitted FormData. Never derive this from `id`. */
+  name: string;
+  required?: boolean;
+  rows?: number;
+  placeholder?: string;
+  defaultValue?: string;
+  error?: string;
+  hint?: string;
+  maxLength?: number;
+  className?: string;
+}) {
+  return (
+    <Field
+      id={id}
+      label={label}
+      error={error}
+      hint={hint}
+      className={className}
+    >
+      <textarea
+        id={id}
+        name={name}
+        rows={rows}
+        required={required}
+        placeholder={placeholder}
+        defaultValue={defaultValue}
+        maxLength={maxLength}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${id}-error` : undefined}
         className={INPUT_CLASS}

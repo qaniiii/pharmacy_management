@@ -467,11 +467,19 @@ export interface Database {
         Update: OrderItemUpdate;
         Relationships: [];
       };
-      order_residents: ReadOnlyTable<OrderResidentRow> & {
+      order_residents: {
+        Row: OrderResidentRow;
         Insert: OrderResidentInsert;
+        /** Keys are immutable; delete and re-add while the order is pending. */
+        Update: Record<string, never>;
+        Relationships: [];
       };
-      order_item_inventory: ReadOnlyTable<OrderItemInventoryRow> & {
+      order_item_inventory: {
+        Row: OrderItemInventoryRow;
         Insert: OrderItemInventoryInsert;
+        /** Keys are immutable; delete and re-add while the order is pending. */
+        Update: Record<string, never>;
+        Relationships: [];
       };
       order_audit_logs: ReadOnlyTable<OrderAuditLogRow>;
     };
