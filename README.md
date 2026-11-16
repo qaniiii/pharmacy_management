@@ -8,6 +8,8 @@ on pharmacy-facing rows.
 frontend/   Next.js 16 (App Router, TypeScript, Tailwind CSS)
 backend/    FastAPI (Pydantic v2)
 supabase/   SQL migrations: schema, RLS, audit trail
+render.yaml Render blueprint for the API
+DEPLOYMENT.md  Vercel + Render + Supabase release checklist
 ```
 
 ## Status
@@ -36,6 +38,10 @@ supabase/   SQL migrations: schema, RLS, audit trail
   export a month-end billing/audit statement (date range, summary, RFC-4180 CSV
   and print/PDF view). The pharmacy export stays strictly PHI-free; the welfare
   export adds the private linked resident.
+- **Phase 7 — deployment:** production-ready for Vercel (`/frontend`) and Render
+  (`/backend`). Both apps read plain OS environment variables, so deployments do
+  not need an env file; `CORS_ORIGINS` takes a JSON array or a comma-separated
+  list. See [`DEPLOYMENT.md`](DEPLOYMENT.md) and the root `render.yaml`.
 
 ## Setup
 

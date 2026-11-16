@@ -26,11 +26,25 @@ OpenAPI docs: <http://localhost:8000/docs>
 
 ## Configuration
 
-`app/core/config.py` reads the repository-root `.env.local` (and falls back to
-`.env`), so the frontend and API share one secret store. Required keys:
-`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`, with optional
-`SUPABASE_URL` / `SUPABASE_ANON_KEY` aliases; `BACKEND_CORS_ORIGINS` defaults to
-`http://localhost:3000`.
+`app/core/config.py` reads OS environment variables first and then, for local
+development, the repository-root `.env.local` (falling back to `.env`), so the
+frontend and API can share one secret store. **No env file is required**: missing
+files are ignored, which is what Render and CI rely on.
+
+Required keys: `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+with optional `SUPABASE_URL` / `SUPABASE_ANON_KEY` aliases.
+
+`CORS_ORIGINS` (aliases `BACKEND_CORS_ORIGINS`, `CORS_ALLOW_ORIGINS`) accepts
+either a JSON array or a comma-separated string, and defaults to
+`http://localhost:3000`:
+
+```dotenv
+CORS_ORIGINS=["https://your-app.vercel.app"]
+CORS_ORIGINS=https://your-app.vercel.app,https://staging.your-app.vercel.app
+```
+
+Entry order is preserved and duplicates are removed; a trailing slash on an
+`http(s)` origin is stripped, because browsers never send one in `Origin`.
 
 The admin endpoints additionally need:
 

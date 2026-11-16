@@ -17,9 +17,29 @@ const { combinedEnv } = loadEnvConfig(
   true,
 );
 
-const supabaseUrl = combinedEnv.NEXT_PUBLIC_SUPABASE_URL ?? "";
-const supabaseAnonKey = combinedEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
-const apiBaseUrl = (combinedEnv.API_BASE_URL ?? "").replace(/\/+$/, "");
+/**
+ * Resolve one variable without depending on any file being on disk.
+ *
+ * `loadEnvConfig` returns the parsed files merged over `process.env`, so on a
+ * Vercel build (no repo-root `.env.local`, values supplied by the project
+ * dashboard) the variable is already present. The explicit `process.env`
+ * fallback keeps that behaviour even if a future @next/env release stops
+ * merging, and never masks a dashboard value with an empty string from a
+ * checked-in file such as `.env.example`.
+ */
+function readEnv(key: string): string {
+  const fromFiles = combinedEnv[key];
+  if (typeof fromFiles === "string" && fromFiles.trim() !== "") {
+    return fromFiles.trim();
+  }
+
+  const fromProcess = process.env[key];
+  return typeof fromProcess === "string" ? fromProcess.trim() : "";
+}
+
+const supabaseUrl = readEnv("NEXT_PUBLIC_SUPABASE_URL");
+const supabaseAnonKey = readEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+const apiBaseUrl = readEnv("API_BASE_URL").replace(/\/+$/, "");
 
 const nextConfig: NextConfig = {
   // Public Supabase credentials are safe to inline: they are anon keys whose

@@ -1,0 +1,47 @@
+# Render blueprint for the FastAPI service.
+#
+# Only the Python API lives here; the Next.js app is deployed to Vercel. The
+# repository root stays the blueprint location, so `rootDir` points Render at
+# the backend package.
+#
+# Values marked `sync: false` are secrets and are entered in the Render
+# dashboard (or prompted for on first blueprint sync). Never commit them.
+
+services:
+  - type: web
+    name: pharmacy-welfare-api
+    runtime: python
+    plan: free
+    region: oregon
+    rootDir: backend
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # Render reads PYTHON_VERSION at build time to pick the interpreter.
+      - key: PYTHON_VERSION
+        value: "3.13.7"
+      - key: ENVIRONMENT
+        value: production
+      # Supabase project (Project settings -> API).
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      # Server-only. Required by the system-admin provisioning endpoints; never
+      # exposed to the browser.
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      # Optional. Only for projects that still sign access tokens with HS256.
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      # Origins allowed to call this API. Accepts a JSON array:
+      #   ["https://your-app.vercel.app"]
+      # or a comma-separated list:
+      #   https://your-app.vercel.app,https://staging.your-app.vercel.app
+      - key: CORS_ORIGINS
+        sync: false
+      # Base URL used by Supabase invitation emails (the Vercel deployment).
+      - key: FRONTEND_BASE_URL
+        sync: false

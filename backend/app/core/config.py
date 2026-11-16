@@ -1,14 +1,16 @@
 """Application settings.
 
-The monorepo keeps one `.env.local` at the repository root. Both the Next.js
-app and this API read from it, so there is a single place to rotate secrets.
+The monorepo keeps one `.env.local` at the repository root so local development
+has a single place to rotate secrets. Deployments (Render, CI) do not ship an
+env file at all: every value is read from real OS environment variables, and
+missing env files are simply ignored.
 
-Precedence (last wins):
-    1. repository-root `.env.local`
-    2. repository-root `.env`
-    3. `backend/.env.local`
-    4. `backend/.env`
-    5. real environment variables
+Precedence (highest wins):
+    1. real environment variables (Render, CI, shell)
+    2. repository-root `.env.local`
+    3. repository-root `.env`
+    4. `backend/.env.local`
+    5. `backend/.env`
 
 `SUPABASE_SERVICE_ROLE_KEY` is optional and only used by the system-admin
 provisioning endpoints, which must create `auth.users` rows and bypass RLS.
@@ -18,6 +20,7 @@ relies on Row Level Security, so the key is never used for user-facing queries.
 
 from __future__ import annotations
 
+import json
 from functools import lru_cache
 from pathlib import Path
 
@@ -80,9 +83,14 @@ class Settings(BaseSettings):
     supabase_jwt_issuer_suffix: str = "/auth/v1"
 
     # HTTP -------------------------------------------------------------------
+    # Accepts either a JSON array (`["https://a.example","https://b.example"]`)
+    # or a comma-separated list (`https://a.example,https://b.example`). Both
+    # forms are normalised to one comma-separated string, so the field stays a
+    # simple `str` for env parsing while `cors_origins` returns the list.
     cors_allow_origins: str = Field(
         default="http://localhost:3000",
         validation_alias=AliasChoices(
+            "CORS_ORIGINS",
             "BACKEND_CORS_ORIGINS",
             "CORS_ALLOW_ORIGINS",
         ),
@@ -128,14 +136,63 @@ class Settings(BaseSettings):
             raise ValueError("FRONTEND_BASE_URL must start with http:// or https://")
         return cleaned
 
+    @field_validator("cors_allow_origins", mode="before")
+    @classmethod
+    def _normalise_cors_origins(cls, value: object) -> str:
+        """Accept a JSON array or a comma-separated list of origins."""
+        if value is None:
+            return ""
+
+        if isinstance(value, str):
+            raw = value.strip()
+            if not raw:
+                return ""
+            if raw.startswith("["):
+                try:
+                    decoded = json.loads(raw)
+                except json.JSONDecodeError as exc:
+                    raise ValueError(
+                        "CORS_ORIGINS looks like a JSON array but could not be "
+                        f"parsed: {exc.msg}"
+                    ) from exc
+                if not isinstance(decoded, list):
+                    raise ValueError(
+                        "CORS_ORIGINS must be a JSON array of URLs or a "
+                        "comma-separated string"
+                    )
+                entries = [str(entry) for entry in decoded]
+            else:
+                entries = raw.split(",")
+        elif isinstance(value, (list, tuple, set, frozenset)):
+            entries = [str(entry) for entry in value]
+        else:
+            raise ValueError(
+                "CORS_ORIGINS must be a JSON array of URLs or a comma-separated "
+                "string"
+            )
+
+        cleaned: list[str] = []
+        for entry in entries:
+            origin = entry.strip()
+            if not origin:
+                continue
+            # Browsers send Origin without a trailing slash, so a configured
+            # "https://app.example.com/" would otherwise never match.
+            if "://" in origin:
+                origin = origin.rstrip("/")
+            cleaned.append(origin)
+
+        return ",".join(cleaned)
+
     @property
     def cors_origins(self) -> list[str]:
-        """Comma-separated origins, while staying a plain string for env vars."""
-        return [
-            origin.strip()
-            for origin in self.cors_allow_origins.split(",")
-            if origin.strip()
-        ]
+        """Origins as a deduplicated list, keeping the configured order."""
+        ordered: dict[str, None] = {}
+        for origin in self.cors_allow_origins.split(","):
+            origin = origin.strip()
+            if origin:
+                ordered.setdefault(origin, None)
+        return list(ordered)
 
     @property
     def auth_issuer(self) -> str:
