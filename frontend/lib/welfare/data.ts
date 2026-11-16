@@ -25,10 +25,25 @@ export interface InventoryWithResident extends InventoryItemRow {
   resident_name: string | null;
 }
 
+/** The stock row a line was drawn from. Tenant-private; never sent to a pharmacy. */
+export interface InventoryLinkSummary {
+  inventory_item_id: string;
+  medication_name: string | null;
+  strength: string | null;
+}
+
+/**
+ * An order line plus its private stock link. `inventory_link` is non-null when
+ * the line will be credited back to `inventory_items` on completion.
+ */
+export interface WelfareOrderItem extends OrderItemRow {
+  inventory_link: InventoryLinkSummary | null;
+}
+
 /** An order plus the private, tenant-scoped details the pharmacy cannot see. */
 export interface WelfareOrder extends OrderRow {
   pharmacy_name: string | null;
-  items: OrderItemRow[];
+  items: WelfareOrderItem[];
   resident_id: string | null;
   resident_name: string | null;
   audit_logs: OrderAuditLogRow[];
@@ -190,7 +205,7 @@ export async function listOrders(
 
   const orderIds = orders.map((order) => order.id);
 
-  const [itemsResult, linksResult, auditResult] = await Promise.all([
+  const [itemsResult, residentLinksResult, auditResult] = await Promise.all([
     supabase
       .from("order_items")
       .select("*")
@@ -210,9 +225,9 @@ export async function listOrders(
   if (itemsResult.error) {
     throw new Error(`Could not load order lines: ${itemsResult.error.message}`);
   }
-  if (linksResult.error) {
+  if (residentLinksResult.error) {
     throw new Error(
-      `Could not load resident links for orders: ${linksResult.error.message}`,
+      `Could not load resident links for orders: ${residentLinksResult.error.message}`,
     );
   }
   if (auditResult.error) {
@@ -221,16 +236,87 @@ export async function listOrders(
     );
   }
 
-  const itemsByOrder = groupBy(
-    itemsResult.data ?? [],
-    (item) => item.order_id,
+  const itemRows = itemsResult.data ?? [];
+  const itemIds = itemRows.map((item) => item.id);
+
+  const stockLinks: Array<{
+    order_item_id: string;
+    inventory_item_id: string;
+  }> = [];
+
+  if (itemIds.length > 0) {
+    const { data, error: stockLinkError } = await supabase
+      .from("order_item_inventory")
+      .select("order_item_id, inventory_item_id")
+      .in("order_item_id", itemIds);
+
+    if (stockLinkError) {
+      throw new Error(
+        `Could not load the inventory links for order lines: ${stockLinkError.message}`,
+      );
+    }
+
+    stockLinks.push(...(data ?? []));
+  }
+
+  const stockIds = [
+    ...new Set(stockLinks.map((link) => link.inventory_item_id)),
+  ];
+  const stockRows = new Map<
+    string,
+    { medication_name: string; strength: string | null }
+  >();
+
+  if (stockIds.length > 0) {
+    const { data, error: stockError } = await supabase
+      .from("inventory_items")
+      .select("id, medication_name, strength")
+      .in("id", stockIds);
+
+    if (stockError) {
+      throw new Error(
+        `Could not load the linked inventory rows: ${stockError.message}`,
+      );
+    }
+
+    for (const row of data ?? []) {
+      stockRows.set(row.id, {
+        medication_name: row.medication_name,
+        strength: row.strength,
+      });
+    }
+  }
+
+  const inventoryByItem = new Map(
+    stockLinks.map((link) => [link.order_item_id, link.inventory_item_id]),
   );
+
+  const itemsWithLinks: WelfareOrderItem[] = itemRows.map((item) => {
+    const inventoryItemId = inventoryByItem.get(item.id);
+
+    if (!inventoryItemId) {
+      return { ...item, inventory_link: null };
+    }
+
+    const stock = stockRows.get(inventoryItemId);
+
+    return {
+      ...item,
+      inventory_link: {
+        inventory_item_id: inventoryItemId,
+        medication_name: stock?.medication_name ?? null,
+        strength: stock?.strength ?? null,
+      },
+    };
+  });
+
+  const itemsByOrder = groupBy(itemsWithLinks, (item) => item.order_id);
   const auditByOrder = groupBy(
     auditResult.data ?? [],
     (log) => log.order_id,
   );
   const residentByOrder = new Map(
-    (linksResult.data ?? []).map((link) => [
+    (residentLinksResult.data ?? []).map((link) => [
       link.order_id,
       link.resident_id,
     ]),

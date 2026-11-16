@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
+import { BillingToolbar } from "@/components/billing/billing-toolbar";
 import { PharmacyOrderCard } from "@/components/pharmacy/order-card";
+import { buildPharmacyBillingLines } from "@/lib/billing";
 import type { OrderStatus } from "@/lib/types/database";
 import type { PharmacyOrder } from "@/lib/pharmacy/data";
 
@@ -19,8 +21,20 @@ const STATUS_FILTERS: ReadonlyArray<{
   { id: "cancelled", label: "Cancelled" },
 ];
 
-export function PharmacyOrderQueue({ orders }: { orders: PharmacyOrder[] }) {
+export function PharmacyOrderQueue({
+  orders,
+  organisationName,
+  organisationDetail,
+}: {
+  orders: PharmacyOrder[];
+  organisationName: string;
+  organisationDetail?: string;
+}) {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
+  const billingLines = useMemo(
+    () => buildPharmacyBillingLines(orders),
+    [orders],
+  );
 
   const counts = orders.reduce<Record<string, number>>((accumulator, order) => {
     accumulator[order.status] = (accumulator[order.status] ?? 0) + 1;
@@ -34,6 +48,13 @@ export function PharmacyOrderQueue({ orders }: { orders: PharmacyOrder[] }) {
 
   return (
     <div className="space-y-4">
+      <BillingToolbar
+        variant="pharmacy"
+        organisationName={organisationName}
+        organisationDetail={organisationDetail}
+        lines={billingLines}
+      />
+
       <div className="flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
         {STATUS_FILTERS.map((filter) => {
           const active = statusFilter === filter.id;

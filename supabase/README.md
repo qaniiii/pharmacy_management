@@ -9,12 +9,13 @@ supabase/
     20261115000200_row_level_security.sql   -- RLS policies + grants
     20261115000300_order_audit.sql          -- order_audit_logs + trigger
     20261116000100_pharmacy_order_pricing.sql -- pharmacy-only unit_price policy + guard
+    20261116000200_auto_stock_reconciliation.sql -- prepared -> completed inventory credit
 ```
 
 Apply in that order (they are written to be run exactly once).
 
 - CLI: `supabase link --project-ref <ref>` then `supabase db push`
-- Or run the four files in order in the Supabase SQL editor.
+- Or run the five files in order in the Supabase SQL editor.
 
 `handle_new_user` attaches to `auth.users`, so the schema must exist before any
 user is created.
@@ -43,6 +44,28 @@ for `pharmacy_admin` that is pinned to pending orders addressed to its own
 pharmacy, and `guard_order_item_pharmacy_pricing` rejects any column change
 other than `unit_price`. The pre-existing `guard_order_item_edits` trigger still
 freezes every line once the order leaves `pending`.
+
+## Automatic stock reconciliation
+
+Migration 5 adds `reconcile_inventory_on_order_completed()`, a
+`SECURITY DEFINER` trigger that fires strictly on `OLD.status = 'prepared' AND
+NEW.status = 'completed'`:
+
+- For every `order_items` row on the order, it looks up the matching
+  `order_item_inventory` link and adds `order_items.quantity` to
+  `inventory_items.quantity_on_hand`.
+- Both the line and the inventory row must match the order's
+  `welfare_home_id`; a cross-tenant link can never credit another home.
+- Multiple lines pointing at the same stock row are summed before the update,
+  so each inventory row is credited once per completion.
+- Because the function is `SECURITY DEFINER`, a `pharmacy_admin` can complete an
+  order without any RLS policy on `order_item_inventory` or `inventory_items`.
+  No policy is broadened: those tables stay completely invisible to pharmacies.
+- `completed -> completed` is not an allowed edge, so a second completion cannot
+  credit the stock twice. Unlinked/free-text lines are left untouched.
+
+Orders completed before this migration are not backfilled, because their stock
+may already have been adjusted manually.
 
 Tenant scoping is derived from `auth.uid()` through `SECURITY DEFINER` helpers
 (`current_profile_role`, `current_welfare_home_id`, `current_pharmacy_id`,

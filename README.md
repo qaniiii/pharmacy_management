@@ -30,6 +30,12 @@ supabase/   SQL migrations: schema, RLS, audit trail
   line-item pricing while an order is pending, and the
   accept / reject / prepare / complete lifecycle with the audit timeline. The
   portal never queries any resident or stock table.
+- **Phase 6 — reconciliation & billing:** completing an order credits every
+  stock-linked line back to `inventory_items` through a `SECURITY DEFINER`
+  trigger (`20261116000200_auto_stock_reconciliation.sql`), and both order views
+  export a month-end billing/audit statement (date range, summary, RFC-4180 CSV
+  and print/PDF view). The pharmacy export stays strictly PHI-free; the welfare
+  export adds the private linked resident.
 
 ## Setup
 

@@ -14,11 +14,15 @@ export function OrdersSection({
   pharmacies,
   residents,
   inventory,
+  organisationName,
+  organisationDetail,
 }: {
   orders: WelfareOrder[];
   pharmacies: PharmacyRow[];
   residents: ResidentRow[];
   inventory: InventoryWithResident[];
+  organisationName: string;
+  organisationDetail?: string;
 }) {
   const activePharmacies = pharmacies.filter(
     (pharmacy) => pharmacy.is_active,
@@ -54,7 +58,11 @@ export function OrdersSection({
         </p>
       ) : null}
 
-      <OrderHistory orders={orders} />
+      <OrderHistory
+        orders={orders}
+        organisationName={organisationName}
+        organisationDetail={organisationDetail}
+      />
     </div>
   );
 }

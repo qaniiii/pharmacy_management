@@ -1,22 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
   confirmReceiptAction,
   withdrawOrderAction,
 } from "@/app/welfare/actions";
 import { ToggleForm } from "@/components/admin/toggle-form";
+import { BillingToolbar } from "@/components/billing/billing-toolbar";
 import {
   ORDER_STATUS_LABELS,
   OrderStatusBadge,
 } from "@/components/orders/order-status-badge";
 import { isUserRole, ROLE_LABELS } from "@/lib/auth/roles";
+import { buildWelfareBillingLines } from "@/lib/billing";
 import type {
   OrderAuditLogRow,
   OrderStatus,
 } from "@/lib/types/database";
-import type { WelfareOrder } from "@/lib/welfare/data";
+import type {
+  InventoryLinkSummary,
+  WelfareOrder,
+} from "@/lib/welfare/data";
 import {
   formatAmount,
   formatDateTime,
@@ -59,6 +64,73 @@ function auditActor(log: OrderAuditLogRow): string | null {
   const role = metadataString(log, "actor_role");
   if (!role) return null;
   return isUserRole(role) ? ROLE_LABELS[role] : role;
+}
+
+/**
+ * Subtle per-line note showing whether the line is linked to a stock row and
+ * what completion will do with it. The link itself is tenant-private data.
+ */
+function RestockIndicator({
+  status,
+  link,
+}: {
+  status: OrderStatus;
+  link: InventoryLinkSummary;
+}) {
+  const stockLabel =
+    [link.medication_name, link.strength].filter(Boolean).join(" · ") ||
+    "linked stock row";
+
+  if (status === "completed") {
+    return (
+      <span
+        title={`Restocked to ${stockLabel} on completion`}
+        className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[0.6rem] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200"
+      >
+        <span
+          aria-hidden="true"
+          className="size-1.5 rounded-full bg-emerald-500"
+        />
+        Reconciled on completion
+      </span>
+    );
+  }
+  if (status === "prepared") {
+    return (
+      <span
+        title={`Will be restocked to ${stockLabel} when the order completes`}
+        className="mt-1 inline-flex items-center gap-1 rounded-full bg-sky-50 px-1.5 py-0.5 text-[0.6rem] font-medium text-sky-700 ring-1 ring-inset ring-sky-200"
+      >
+        <span aria-hidden="true" className="size-1.5 rounded-full bg-sky-500" />
+        Auto-restocks on completion
+      </span>
+    );
+  }
+
+  if (status === "cancelled" || status === "rejected") {
+    return (
+      <span
+        title={`Linked to ${stockLabel}; this order closed without restocking`}
+        className="mt-1 inline-flex items-center gap-1 rounded-full bg-slate-50 px-1.5 py-0.5 text-[0.6rem] font-medium text-slate-500 ring-1 ring-inset ring-slate-200"
+      >
+        <span
+          aria-hidden="true"
+          className="size-1.5 rounded-full bg-slate-400"
+        />
+        Stock link · no restock
+      </span>
+    );
+  }
+
+  return (
+    <span
+      title={`Linked to ${stockLabel}`}
+      className="mt-1 inline-flex items-center gap-1 rounded-full bg-slate-50 px-1.5 py-0.5 text-[0.6rem] font-medium text-slate-600 ring-1 ring-inset ring-slate-200"
+    >
+      <span aria-hidden="true" className="size-1.5 rounded-full bg-slate-400" />
+      Linked to inventory
+    </span>
+  );
 }
 
 function OrderCard({ order }: { order: WelfareOrder }) {
@@ -166,6 +238,14 @@ function OrderCard({ order }: { order: WelfareOrder }) {
                     {item.notes ? (
                       <p className="mt-0.5 text-slate-500">{item.notes}</p>
                     ) : null}
+                    {item.inventory_link ? (
+                      <div>
+                        <RestockIndicator
+                          status={order.status}
+                          link={item.inventory_link}
+                        />
+                      </div>
+                    ) : null}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 align-top tabular-nums text-slate-700">
                     {formatQuantity(item.quantity, item.unit)}
@@ -182,6 +262,13 @@ function OrderCard({ order }: { order: WelfareOrder }) {
           </tbody>
         </table>
       </div>
+
+      {order.items.some((item) => item.inventory_link) ? (
+        <p className="mt-2 text-[0.65rem] leading-4 text-slate-500">
+          Stock-linked lines are credited back to inventory automatically when a
+          prepared order is completed.
+        </p>
+      ) : null}
 
       <div className="mt-4 border-t border-slate-100 pt-3">
         <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -258,8 +345,20 @@ function OrderCard({ order }: { order: WelfareOrder }) {
   );
 }
 
-export function OrderHistory({ orders }: { orders: WelfareOrder[] }) {
+export function OrderHistory({
+  orders,
+  organisationName,
+  organisationDetail,
+}: {
+  orders: WelfareOrder[];
+  organisationName: string;
+  organisationDetail?: string;
+}) {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
+  const billingLines = useMemo(
+    () => buildWelfareBillingLines(orders, organisationName),
+    [orders, organisationName],
+  );
 
   const counts = orders.reduce<Record<string, number>>((accumulator, order) => {
     accumulator[order.status] = (accumulator[order.status] ?? 0) + 1;
@@ -273,6 +372,13 @@ export function OrderHistory({ orders }: { orders: WelfareOrder[] }) {
 
   return (
     <div className="space-y-4">
+      <BillingToolbar
+        variant="welfare"
+        organisationName={organisationName}
+        organisationDetail={organisationDetail}
+        lines={billingLines}
+      />
+
       <div className="flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
         {STATUS_FILTERS.map((filter) => {
           const active = statusFilter === filter.id;

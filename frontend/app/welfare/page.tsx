@@ -198,6 +198,12 @@ export default async function WelfareDashboardPage({
               pharmacies={pharmacies}
               residents={residents}
               inventory={inventory}
+              organisationName={tenant?.name ?? "Welfare home"}
+              organisationDetail={
+                tenant
+                  ? `${tenant.referenceLabel} ${tenant.reference}`
+                  : undefined
+              }
             />
           ) : null}
         </div>

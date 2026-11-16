@@ -5,7 +5,9 @@ welfare-home and pharmacy onboarding, tenant selection, administrator
 provisioning and account activation. Phase 4 adds the welfare-home workspace:
 residents, hybrid inventory and direct medication ordering. Phase 5 adds the
 pharmacy fulfilment portal: the incoming order queue, pending-order pricing and
-the accept / reject / prepare / complete lifecycle.
+the accept / reject / prepare / complete lifecycle. Phase 6 adds automatic stock
+reconciliation on completion plus month-end billing CSV and print/PDF statements
+in both order views.
 
 ## Scripts
 
@@ -124,6 +126,34 @@ caller's pharmacy:
 - The action layer derives `pharmacy_id` from `profiles`, never from a hidden
   field, and uses the cookie-bound Supabase client so RLS remains authoritative.
 
+## Billing exports & stock reconciliation
+
+Both order views share `components/billing/billing-toolbar.tsx` and
+`lib/billing.ts`:
+
+| View | Statement scope | Columns |
+| --- | --- | --- |
+| `/welfare?tab=orders` | completed orders in the selected UTC date range | billing columns + private `Linked Resident` from `order_residents` |
+| `/pharmacy` | completed orders in the selected UTC date range | billing columns only; no resident, DOB, MRN or stock key |
+
+- The toolbar takes Start/End dates (inclusive, UTC completion date), shows the
+  fulfilled-order count and grand total, and offers **Download CSV** plus a
+  **Print / PDF** statement modal. Both outputs are generated client-side from
+  rows already loaded under RLS.
+- CSV follows RFC 4180: CRLF records, quotes around fields containing commas,
+  quotes, CR or LF, and doubled embedded quotes. Money is written with a plain
+  decimal point.
+- `@media print` in `app/globals.css` hides the app chrome and prints only the
+  statement sheet, in landscape, with repeating table headers and no broken rows.
+- `lib/welfare/data.ts` now attaches each line's `inventory_link` (stock row id,
+  name and strength) and the order history shows a subtle per-line badge:
+  “Linked to inventory”, “Auto-restocks on completion”, “Reconciled on
+  completion” or “Stock link · no restock” for closed orders.
+- Reconciliation itself is database-side: migration 5 credits
+  `inventory_items.quantity_on_hand` when the order moves
+  `prepared -> completed`, regardless of whether the pharmacy or the welfare
+  home drives the transition. See `supabase/README.md`.
+
 ## Layout
 
 ```
@@ -148,10 +178,12 @@ components/
   welfare/              residents, inventory, order drawer/history, modals
   pharmacy/             order queue, fulfilment card, pricing/rejection forms
   orders/               shared order status badge
+  billing/              month-end statement toolbar, CSV download, print modal
 lib/
   env.ts                required public env vars
   api/backend.ts        server-side FastAPI client (Bearer token from Supabase)
   format.ts             shared locale-stable date/amount/quantity formatting
+  billing.ts            statement rows, date filter, summary, RFC-4180 CSV
   admin/                data loaders, validation, form state, tab routing
   welfare/              data loaders, validation, tabs, inventory helpers
   pharmacy/             queue data loader, pricing/rejection validation, state

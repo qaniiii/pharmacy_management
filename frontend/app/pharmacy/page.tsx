@@ -200,7 +200,13 @@ export default async function PharmacyDashboardPage({
           </div>
 
           <div className="mt-4">
-            <PharmacyOrderQueue orders={orders} />
+            <PharmacyOrderQueue
+              orders={orders}
+              organisationName={pharmacy?.name ?? "Pharmacy"}
+              organisationDetail={
+                pharmacy ? `Licence no. ${pharmacy.license_number}` : undefined
+              }
+            />
           </div>
         </div>
       </main>

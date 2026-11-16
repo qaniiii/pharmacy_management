@@ -19,3 +19,63 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+/*
+ * Billing statement printing.
+ *
+ * When a statement modal is open, only the `.print-statement` sheet is printed.
+ * Everything else (app header, queue, modal toolbar) stays on screen.
+ */
+@media print {
+  body.billing-print-open > *:not(.billing-print-root) {
+    display: none !important;
+  }
+
+  .billing-print-root {
+    position: static !important;
+    display: block !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    background: transparent !important;
+  }
+
+  .billing-print-root .print-toolbar {
+    display: none !important;
+  }
+
+  .print-statement {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+  }
+
+  .print-statement table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8.5pt;
+  }
+
+  .print-statement .print-table-wrap {
+    overflow: visible !important;
+  }
+
+  .print-statement thead {
+    display: table-header-group;
+  }
+
+  .print-statement tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  @page {
+    size: landscape;
+    margin: 10mm;
+  }
+}
