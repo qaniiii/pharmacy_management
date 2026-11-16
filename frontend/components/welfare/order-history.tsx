@@ -10,7 +10,7 @@ import { ToggleForm } from "@/components/admin/toggle-form";
 import {
   ORDER_STATUS_LABELS,
   OrderStatusBadge,
-} from "@/components/welfare/order-status-badge";
+} from "@/components/orders/order-status-badge";
 import { isUserRole, ROLE_LABELS } from "@/lib/auth/roles";
 import type {
   OrderAuditLogRow,
@@ -21,7 +21,7 @@ import {
   formatAmount,
   formatDateTime,
   formatQuantity,
-} from "@/lib/welfare/format";
+} from "@/lib/format";
 
 const STATUS_FILTERS: ReadonlyArray<{
   id: OrderStatus | "all";

@@ -1,5 +1,5 @@
 /**
- * Locale-stable formatting helpers.
+ * Locale-stable formatting helpers shared by the tenant workspaces.
  *
  * A fixed locale and UTC time zone keep server-rendered markup identical to the
  * first client render, which avoids React hydration warnings.

@@ -19,7 +19,7 @@ import {
   INITIAL_WELFARE_FORM_STATE,
   type WelfareFormState,
 } from "@/lib/welfare/form-state";
-import { formatQuantity } from "@/lib/welfare/format";
+import { formatQuantity } from "@/lib/format";
 
 interface OrderLineState {
   key: string;

@@ -3,7 +3,9 @@
 App Router, TypeScript, Tailwind CSS 4. Phase 3 adds the system-admin portal:
 welfare-home and pharmacy onboarding, tenant selection, administrator
 provisioning and account activation. Phase 4 adds the welfare-home workspace:
-residents, hybrid inventory and direct medication ordering.
+residents, hybrid inventory and direct medication ordering. Phase 5 adds the
+pharmacy fulfilment portal: the incoming order queue, pending-order pricing and
+the accept / reject / prepare / complete lifecycle.
 
 ## Scripts
 
@@ -94,6 +96,34 @@ token and re-checks `system_admin`.
 - Withdraw is `pending -> cancelled`; confirm receipt is `prepared -> completed`.
   Both are enforced by the database state-machine trigger as well as RLS.
 
+## Pharmacy workspace
+
+`/pharmacy` is limited to `pharmacy_admin` and shows only orders addressed to the
+caller's pharmacy:
+
+| Area | Reads (Supabase, RLS) | Writes |
+| --- | --- | --- |
+| Order queue | orders, order items, audit logs and the requesting welfare home's name/address/contact | — |
+| Pending order | same, with editable `unit_price` per line | save prices, then `pending -> accepted` |
+| Rejection | same | `pending -> rejected` with a required reason |
+| Fulfilment | same | `accepted -> prepared`; `prepared -> completed` |
+| Header | own `pharmacies` row | — |
+
+- Status pills filter the queue (All, Pending, Accepted, Prepared, Completed,
+  Rejected, Cancelled) with counts derived from the live data.
+- The portal never queries `residents`, `inventory_items`, `order_residents` or
+  `order_item_inventory`. Only `orders.resident_reference` (the non-identifying
+  bag label) is shown to the pharmacy.
+- Prices can only be written while the order is pending. Migration
+  `20261116000100_pharmacy_order_pricing.sql` adds the missing pharmacy
+  `order_items` update policy plus a guard trigger that permits **only**
+  `unit_price` changes. The existing guard freezes lines once the order leaves
+  pending.
+- Every transition is also enforced by `enforce_order_status_rules` and by RLS;
+  a rejection requires a non-empty `rejection_reason` (check constraint too).
+- The action layer derives `pharmacy_id` from `profiles`, never from a hidden
+  field, and uses the cookie-bound Supabase client so RLS remains authoritative.
+
 ## Layout
 
 ```
@@ -108,17 +138,23 @@ app/
   welfare/
     page.tsx            resident, inventory and ordering workspace
     actions.ts          resident/stock CRUD, quantity, order lifecycle actions
-  pharmacy/             pharmacy dashboard
+  pharmacy/
+    page.tsx            order queue, pricing and fulfilment workspace
+    actions.ts          accept/reject/prepare/complete actions
 components/
   app-header.tsx        shared authenticated header/footer
   role-dashboard.tsx    pharmacy placeholder dashboard
   admin/                forms, tables, badges, tab nav, status toggles
   welfare/              residents, inventory, order drawer/history, modals
+  pharmacy/             order queue, fulfilment card, pricing/rejection forms
+  orders/               shared order status badge
 lib/
   env.ts                required public env vars
   api/backend.ts        server-side FastAPI client (Bearer token from Supabase)
+  format.ts             shared locale-stable date/amount/quantity formatting
   admin/                data loaders, validation, form state, tab routing
-  welfare/              data loaders, validation, tabs, inventory/format helpers
+  welfare/              data loaders, validation, tabs, inventory helpers
+  pharmacy/             queue data loader, pricing/rejection validation, state
   supabase/client.ts    browser client
   supabase/server.ts    cookie-bound server client
   auth/                 role map, profile guard, tenant loading, actions
@@ -128,8 +164,9 @@ proxy.ts                session refresh + route guard (Next 16 proxy)
 ```
 
 `lib/types/database.ts` is hand-maintained against
-`supabase/migrations/20261115000100_core_schema.sql` and
-`20261115000300_order_audit.sql`. It includes `order_residents`,
+`supabase/migrations/20261115000100_core_schema.sql`,
+`20261115000300_order_audit.sql` and
+`20261116000100_pharmacy_order_pricing.sql`. It includes `order_residents`,
 `order_item_inventory`, the `cancelled` order status and the
 `profiles → welfare_homes/pharmacies` relations used by embedded selects.
 Regenerate from the database if the schema moves faster than the migrations.

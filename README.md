@@ -25,6 +25,11 @@ supabase/   SQL migrations: schema, RLS, audit trail
   welfare administrator the resident register, hybrid pooled/resident stock,
   and direct medication ordering with lifecycle actions and the audit timeline.
   Every read and write is scoped by RLS to the caller's `welfare_home_id`.
+- **Phase 5 — pharmacy fulfilment:** `/pharmacy` gives a pharmacy administrator
+  the incoming order queue with status filters, welfare-home delivery details,
+  line-item pricing while an order is pending, and the
+  accept / reject / prepare / complete lifecycle with the audit timeline. The
+  portal never queries any resident or stock table.
 
 ## Setup
 

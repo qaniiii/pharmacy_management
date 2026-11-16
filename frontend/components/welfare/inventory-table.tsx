@@ -8,7 +8,7 @@ import { InventoryEditor } from "@/components/welfare/inventory-editor";
 import { QuantityAdjustForm } from "@/components/welfare/quantity-adjust-form";
 import type { ResidentRow } from "@/lib/types/database";
 import type { InventoryWithResident } from "@/lib/welfare/data";
-import { formatDate, formatQuantity } from "@/lib/welfare/format";
+import { formatDate, formatQuantity } from "@/lib/format";
 import {
   daysUntilExpiry,
   expiryState,

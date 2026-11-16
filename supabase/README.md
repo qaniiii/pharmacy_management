@@ -8,12 +8,13 @@ supabase/
     20261115000100_core_schema.sql          -- tables, constraints, triggers, state machine
     20261115000200_row_level_security.sql   -- RLS policies + grants
     20261115000300_order_audit.sql          -- order_audit_logs + trigger
+    20261116000100_pharmacy_order_pricing.sql -- pharmacy-only unit_price policy + guard
 ```
 
 Apply in that order (they are written to be run exactly once).
 
 - CLI: `supabase link --project-ref <ref>` then `supabase db push`
-- Or run the three files in order in the Supabase SQL editor.
+- Or run the four files in order in the Supabase SQL editor.
 
 `handle_new_user` attaches to `auth.users`, so the schema must exist before any
 user is created.
@@ -28,7 +29,7 @@ user is created.
 | `residents` | all | own home only | **no policy — no access** |
 | `inventory_items` | all | own home only | **no policy — no access** |
 | `orders` | all | own home, insert as `pending`, may withdraw while pending | addressed to its pharmacy |
-| `order_items` | all | own pending orders | read-only |
+| `order_items` | all | own pending orders | read; update `unit_price` while pending |
 | `order_residents` | all | own home, while order is pending | **no policy — no access** |
 | `order_item_inventory` | all | own home, while order is pending | **no policy — no access** |
 | `order_audit_logs` | read | own home via order | own pharmacy via order |
@@ -36,6 +37,12 @@ user is created.
 `pharmacy_admin` has no `SELECT`/`INSERT`/`UPDATE`/`DELETE` policy on
 `residents` or `inventory_items`, so those tables return an empty result set and
 writes fail regardless of what the client sends.
+
+`order_items` pricing is deliberately narrow: migration 4 adds an UPDATE policy
+for `pharmacy_admin` that is pinned to pending orders addressed to its own
+pharmacy, and `guard_order_item_pharmacy_pricing` rejects any column change
+other than `unit_price`. The pre-existing `guard_order_item_edits` trigger still
+freezes every line once the order leaves `pending`.
 
 Tenant scoping is derived from `auth.uid()` through `SECURITY DEFINER` helpers
 (`current_profile_role`, `current_welfare_home_id`, `current_pharmacy_id`,

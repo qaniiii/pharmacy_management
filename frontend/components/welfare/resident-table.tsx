@@ -3,7 +3,7 @@ import { StatusBadge } from "@/components/admin/status-badge";
 import { ToggleForm } from "@/components/admin/toggle-form";
 import { ResidentEditor } from "@/components/welfare/resident-editor";
 import type { ResidentRow } from "@/lib/types/database";
-import { formatDate } from "@/lib/welfare/format";
+import { formatDate } from "@/lib/format";
 
 const TABLE_CLASS = "min-w-full divide-y divide-slate-200 text-sm";
 const HEAD_CLASS =
