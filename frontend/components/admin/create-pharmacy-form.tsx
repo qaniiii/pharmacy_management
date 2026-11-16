@@ -30,6 +30,7 @@ export function CreatePharmacyForm() {
           <TextField
             id="pharmacy-name"
             label="Name"
+            name="name"
             required
             maxLength={120}
             placeholder="Central Pharmacy"
@@ -67,6 +68,7 @@ export function CreatePharmacyForm() {
           <TextField
             id="pharmacy-city"
             label="City"
+            name="city"
             required
             maxLength={80}
             autoComplete="address-level2"
@@ -75,6 +77,7 @@ export function CreatePharmacyForm() {
           <TextField
             id="pharmacy-region"
             label="Region"
+            name="region"
             maxLength={80}
             autoComplete="address-level1"
             error={errors.region}
@@ -90,6 +93,7 @@ export function CreatePharmacyForm() {
           <TextField
             id="pharmacy-phone"
             label="Phone"
+            name="phone"
             type="tel"
             maxLength={40}
             autoComplete="tel"
@@ -98,6 +102,7 @@ export function CreatePharmacyForm() {
           <TextField
             id="pharmacy-email"
             label="Email"
+            name="email"
             type="email"
             maxLength={254}
             autoComplete="email"

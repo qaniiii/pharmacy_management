@@ -31,7 +31,8 @@ export function ProvisionUserForm({
   const errors = state.fieldErrors ?? {};
   const options = role === "welfare_admin" ? homes : pharmacies;
   const activeCount = options.filter((option) => option.is_active).length;
-  const tenantField = role === "welfare_admin" ? "welfare_home_id" : "pharmacy_id";
+  const tenantField =
+    role === "welfare_admin" ? "welfare_home_id" : "pharmacy_id";
   const tenantLabel = role === "welfare_admin" ? "Welfare home" : "Pharmacy";
 
   return (
@@ -59,6 +60,7 @@ export function ProvisionUserForm({
           <TextField
             id="user-email"
             label="Work email"
+            name="email"
             type="email"
             required
             maxLength={254}
@@ -78,6 +80,7 @@ export function ProvisionUserForm({
           <TextField
             id="user-phone"
             label="Phone"
+            name="phone"
             type="tel"
             maxLength={40}
             autoComplete="off"
@@ -165,6 +168,7 @@ export function ProvisionUserForm({
             <TextField
               id="user-password"
               label="Temporary password"
+              name="password"
               type="password"
               minLength={8}
               maxLength={72}

@@ -3,10 +3,7 @@
 import { useActionState } from "react";
 
 import { createWelfareHomeAction } from "@/app/admin/actions";
-import {
-  FormError,
-  TextField,
-} from "@/components/admin/form-field";
+import { FormError, TextField } from "@/components/admin/form-field";
 import { SubmitButton } from "@/components/admin/submit-button";
 import { INITIAL_ADMIN_FORM_STATE } from "@/lib/admin/form-state";
 
@@ -33,6 +30,7 @@ export function CreateWelfareHomeForm() {
           <TextField
             id="home-name"
             label="Name"
+            name="name"
             required
             maxLength={120}
             placeholder="Riverside Care Home"
@@ -63,6 +61,7 @@ export function CreateWelfareHomeForm() {
           <TextField
             id="home-city"
             label="City"
+            name="city"
             required
             maxLength={80}
             autoComplete="address-level2"
@@ -71,6 +70,7 @@ export function CreateWelfareHomeForm() {
           <TextField
             id="home-region"
             label="Region"
+            name="region"
             maxLength={80}
             autoComplete="address-level1"
             error={errors.region}
@@ -86,6 +86,7 @@ export function CreateWelfareHomeForm() {
           <TextField
             id="home-phone"
             label="Phone"
+            name="phone"
             type="tel"
             maxLength={40}
             autoComplete="tel"
@@ -94,6 +95,7 @@ export function CreateWelfareHomeForm() {
           <TextField
             id="home-email"
             label="Email"
+            name="email"
             type="email"
             maxLength={254}
             autoComplete="email"

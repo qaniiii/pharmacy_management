@@ -40,7 +40,7 @@ export function Field({
 export function TextField({
   id,
   label,
-  name = id,
+  name,
   type = "text",
   required = false,
   placeholder,
@@ -54,7 +54,8 @@ export function TextField({
 }: {
   id: string;
   label: string;
-  name?: string;
+  /** Field name in the submitted FormData. Never derive this from `id`. */
+  name: string;
   type?: "text" | "email" | "tel" | "password";
   required?: boolean;
   placeholder?: string;
